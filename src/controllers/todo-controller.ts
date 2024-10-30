@@ -2,12 +2,24 @@ import { NextFunction, Request, Response } from "express";
 import { TodoModel } from "../models/todo-model";
 import {
   createTodo,
+  createTodoWithPool,
   deleteTodo,
+  deleteTodoWithPool,
   getAllTodos,
+  getAllTodoWithPoll,
   getTodoById,
+  getTodoByIdWithPool,
   updateTodo,
+  updateTodoWithPool,
 } from "../database";
 import { error } from "console";
+import {
+  createTodoMongoDb,
+  deleteTodoMongoDb,
+  getAllTodoMongoDb,
+  getTodoByIdMongoDb,
+  updateTodoMongoDb,
+} from "../mongoose/query";
 
 export async function getTodoController(
   req: Request,
@@ -22,9 +34,9 @@ export async function getTodoController(
       return;
     }
 
-    const myTodoModel = new TodoModel();
+    // const myTodoModel = new TodoModel();
 
-    const todo = myTodoModel.getTodo(parseInt(todoId as string));
+    // const todo = myTodoModel.getTodo(parseInt(todoId as string));
 
     //   if (!todo) {
     //     res.status(404).json({
@@ -33,15 +45,11 @@ export async function getTodoController(
     //     return;
     //   }
 
-    const result = (await getTodoById(parseInt(todoId))) as {
-      id: number;
-      name: string;
-      created_at: Date;
-    }[];
+    const result = await getTodoByIdMongoDb(todoId);
 
     console.log("result", result);
 
-    if (!result.length) {
+    if (!result) {
       res.status(404).json({
         message: "todo not found",
         data: null,
@@ -49,7 +57,7 @@ export async function getTodoController(
     } else {
       res.json({
         message: "getting todo by id",
-        data: result[0],
+        data: result,
       });
     }
   } catch (e: any) {
@@ -66,11 +74,16 @@ export async function createTodoController(
   try {
     const body = req.body;
 
-    console.log("body", body);
+    // console.log("body", body);
 
     const name = body.name;
+    const description = body.description;
+    // mysql database
+    // const result = await createTodoWithPool(name);
 
-    const result = await createTodo(name);
+    // mongodb database
+    const result = await createTodoMongoDb(name, description);
+    console.log("result:", result);
 
     res.status(201).json({
       data: result,
@@ -91,9 +104,11 @@ export async function updateTodoController(
     const todoId = req.params.todoId;
     const body = req.body;
     const name = req.body.name;
-    console.log("body:", name);
+    const description = req.body.description;
+    const status = req.body.status;
+    // console.log("body:", name);
 
-    const result = await updateTodo(parseInt(todoId), name);
+    const result = await updateTodoMongoDb(todoId, name, description, status);
 
     res.json({
       message: "todo update successfully",
@@ -111,7 +126,7 @@ export async function deleteTodoController(
 ) {
   try {
     const todoId = req.params.todoId;
-    const result = await deleteTodo(parseInt(todoId));
+    const result = await deleteTodoMongoDb(todoId);
     res.json({
       message: "id delete successfully",
     });
@@ -127,7 +142,7 @@ export async function getAllTodoController(
   next: NextFunction
 ) {
   try {
-    const result = await getAllTodos();
+    const result = await getAllTodoMongoDb();
 
     res.json({
       data: result,
